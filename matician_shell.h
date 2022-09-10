@@ -8,7 +8,8 @@
 #include <string.h>
 #include <math.h>
 
-#define DEBUG 1 // Keep DEBUG as 0 to improve speed!
+#define DEBUG 0 // Keep DEBUG as 0 to improve speed!
+#define  MAX_CHAR_LIMIT 1000
 
 
 /*==================STATE MACHINE===========*/

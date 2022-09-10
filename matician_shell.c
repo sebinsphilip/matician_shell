@@ -11,11 +11,17 @@ compile:
 
 char* input_string_pointer;
 
+char* start_token_pointer;
+char* end_token_pointer;
+eParseStates eNextState = Default_State;
+eParseStates ePreviousState = Default_State;
+
 eParseStates Start_DoubleQuote_Parsed_EventHandler (void)
 {
 #if DEBUG
     printf ("+++ %s +++\n", __func__);
 #endif
+    start_token_pointer = input_string_pointer;
     return Inside_DoubleQuotes_State;
 
 }
@@ -25,6 +31,12 @@ eParseStates End_DoubleQuote_Parsed_EventHandler (void)
 #if DEBUG
     printf ("+++ %s +++\n", __func__);
 #endif
+    end_token_pointer = input_string_pointer -1;
+    char temp = *end_token_pointer;
+    *end_token_pointer = '\0';
+    printf ("TOKEN_DOUBLE_QUOTE:%s\n", start_token_pointer);
+    *end_token_pointer = temp;
+    start_token_pointer = end_token_pointer = NULL;
     return Default_State;
 
 }
@@ -34,6 +46,7 @@ eParseStates Start_SingleQuote_Parsed_EventHandler (void)
 #if DEBUG
     printf ("+++ %s +++\n", __func__);
 #endif
+    start_token_pointer = input_string_pointer;
     return Inside_SingleQuotes_State;
 
 }
@@ -42,6 +55,12 @@ eParseStates End_SingleQuote_Parsed_EventHandler (void)
 #if DEBUG
     printf ("+++ %s +++\n", __func__);
 #endif
+    end_token_pointer = input_string_pointer -1;
+    char temp = *end_token_pointer;
+    *end_token_pointer = '\0';
+    printf ("TOKEN_SINGLE_QUOTE:%s\n", start_token_pointer);
+    *end_token_pointer = temp;
+    start_token_pointer = end_token_pointer = NULL;
     return Default_State;
 
 }
@@ -68,6 +87,15 @@ eParseStates Space_Parsed_EventHandler (void)
 #if DEBUG
     printf ("+++ %s +++\n", __func__);
 #endif
+    if (ePreviousState == Inside_NormalWord_State)
+    {
+        end_token_pointer = input_string_pointer -1;
+        char temp = *end_token_pointer;
+        *end_token_pointer = '\0';
+        printf ("TOKEN_WORD_I:%s\n", start_token_pointer);
+        *end_token_pointer = temp;
+    }
+    start_token_pointer = end_token_pointer = NULL;
     return Default_State;
 
 }
@@ -76,6 +104,7 @@ eParseStates Word_Parsed_EventHandler (void)
 #if DEBUG
     printf ("+++ %s +++\n", __func__);
 #endif
+    start_token_pointer = input_string_pointer -1;
     return Inside_NormalWord_State;
 
 }
@@ -93,6 +122,15 @@ eParseStates Accept_EventHandler (void)
 #if DEBUG
     printf ("+++ %s +++\n", __func__);
 #endif
+    if (ePreviousState == Inside_NormalWord_State)
+    {
+        end_token_pointer = input_string_pointer -1;
+        char temp = *end_token_pointer;
+        *end_token_pointer = '\0';
+        printf ("TOKEN_WORD_II:%s\n", start_token_pointer);
+        *end_token_pointer = temp;
+    }
+    start_token_pointer = end_token_pointer = NULL;
     return Accept_State;
 
 }
@@ -262,8 +300,15 @@ void mat_readcommands()
     fprintf (stderr, " Leading space Trimmed string(%s)", lineptrdup);
 #endif
 #endif
+    if (MAX_CHAR_LIMIT < n_chars_read)
+    {
+        fprintf (stderr, "error: Input exceeded 1000 characters");
+        return;
+    }
+    start_token_pointer = end_token_pointer = NULL;
     input_string_pointer = lineptr;
-    eParseStates eNextState = Default_State;
+    eNextState = Default_State;
+    ePreviousState = Default_State;
     eParseEvents eNewEvent = UndefinedCode_Parsed_Event;
 
     while (eNextState != Accept_State)
@@ -285,6 +330,7 @@ void mat_readcommands()
 #if DEBUG
                     printf ("Event: [%d,%d]\n", eNewEvent, asParserStateMachine[i].eParserStateMachineEvents);
 #endif
+                    ePreviousState = eNextState;
                     eNextState = (*asParserStateMachine[i].pfParserStateMachineEventHandler)();
                     break;
 
@@ -323,6 +369,7 @@ int main()
     while (1)
     {
         fprintf (stderr, "$");
+        start_token_pointer = end_token_pointer = NULL;
         mat_readcommands ();
     }
     return EXIT_SUCCESS;
