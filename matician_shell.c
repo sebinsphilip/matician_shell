@@ -13,6 +13,8 @@ char* input_string_pointer;
 
 char* start_token_pointer;
 char* end_token_pointer;
+char *token_list[MAX_CHAR_LIMIT/2] = {NULL};
+int token_list_index = 0;
 eParseStates eNextState = Default_State;
 eParseStates ePreviousState = Default_State;
 
@@ -34,7 +36,10 @@ eParseStates End_DoubleQuote_Parsed_EventHandler (void)
     end_token_pointer = input_string_pointer -1;
     char temp = *end_token_pointer;
     *end_token_pointer = '\0';
-    printf ("TOKEN_DOUBLE_QUOTE:%s\n", start_token_pointer);
+    printf ("TOKEN_DOUBLE_QUOTE:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+    token_list[token_list_index] = strdup(start_token_pointer);
+    token_list_index++;
+
     *end_token_pointer = temp;
     start_token_pointer = end_token_pointer = NULL;
     return Default_State;
@@ -58,7 +63,9 @@ eParseStates End_SingleQuote_Parsed_EventHandler (void)
     end_token_pointer = input_string_pointer -1;
     char temp = *end_token_pointer;
     *end_token_pointer = '\0';
-    printf ("TOKEN_SINGLE_QUOTE:%s\n", start_token_pointer);
+    printf ("TOKEN_SINGLE_QUOTE:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+    token_list[token_list_index] = strdup(start_token_pointer);
+    token_list_index++;
     *end_token_pointer = temp;
     start_token_pointer = end_token_pointer = NULL;
     return Default_State;
@@ -92,7 +99,9 @@ eParseStates Space_Parsed_EventHandler (void)
         end_token_pointer = input_string_pointer -1;
         char temp = *end_token_pointer;
         *end_token_pointer = '\0';
-        printf ("TOKEN_WORD_I:%s\n", start_token_pointer);
+        printf ("TOKEN_WORD_I:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+        token_list[token_list_index] = strdup(start_token_pointer);
+        token_list_index++;
         *end_token_pointer = temp;
     }
     start_token_pointer = end_token_pointer = NULL;
@@ -127,7 +136,9 @@ eParseStates Accept_EventHandler (void)
         end_token_pointer = input_string_pointer -1;
         char temp = *end_token_pointer;
         *end_token_pointer = '\0';
-        printf ("TOKEN_WORD_II:%s\n", start_token_pointer);
+        printf ("TOKEN_WORD_II:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+        token_list[token_list_index] = strdup(start_token_pointer);
+        token_list_index++;
         *end_token_pointer = temp;
     }
     start_token_pointer = end_token_pointer = NULL;
@@ -356,6 +367,11 @@ void mat_readcommands()
  * /usr/bin/printf "Missing quote
  * 
  */
+    printf ("Tokens:\n");
+    for (int idx= 0 ; idx < token_list_index; idx++)
+    {
+        printf ("%s\n", token_list[idx]);
+    }
 
 exit:
 
@@ -363,6 +379,17 @@ exit:
 
 }
 
+void clear_token_list ()
+{
+    for (int idx= 0 ; idx < token_list_index; idx++)
+    {
+        //printf ("%s\n", token_list[idx]);
+        free (token_list[idx]);
+        token_list[idx] = NULL;
+    }
+    token_list_index = 0;
+
+}
 
 int main()
 {
@@ -371,6 +398,7 @@ int main()
         fprintf (stderr, "$");
         start_token_pointer = end_token_pointer = NULL;
         mat_readcommands ();
+        clear_token_list();
     }
     return EXIT_SUCCESS;
 }
