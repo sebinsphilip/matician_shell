@@ -12,10 +12,14 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define DEBUG 0 // Keep DEBUG as 0 to improve speed!
-#define  MAX_CHAR_LIMIT 1000
+#define DEBUG 1 // Keep DEBUG as 0 to improve speed!
 
+#if DEBUG
+#define DEBUG_STATE_MACHINE 1
+#define DEBUG_GENERIC 0
+#endif
 
+#define  MAX_CHAR_LIMIT 1000 /* Max character limit for the shell */
 /*==================STATE MACHINE===========*/
 typedef enum {
     Default_State,

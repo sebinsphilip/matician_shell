@@ -9,6 +9,19 @@ compile:
 
 #include "matician_shell.h"
 
+
+/**
+ * ================    Test cases ==============
+ * /bin/ls -l /usr/share
+ * cat /proc/mounts
+ * /bin/echo extra   spaces will    be     removed
+ * "but any thing inside thy're ee"
+ * '/tmp/"hello"'
+ * /usr/bin/printf "The cat's name is %s.\n" 'Theodore Roosevelt'
+ * /usr/bin/printf "Missing quote
+ * cd /sys
+ */
+
 char* input_string_pointer;
 
 char* start_token_pointer;
@@ -20,7 +33,7 @@ eParseStates ePreviousState = Default_State;
 
 eParseStates Start_DoubleQuote_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     start_token_pointer = input_string_pointer;
@@ -30,13 +43,15 @@ eParseStates Start_DoubleQuote_Parsed_EventHandler (void)
 
 eParseStates End_DoubleQuote_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     end_token_pointer = input_string_pointer -1;
     char temp = *end_token_pointer;
     *end_token_pointer = '\0';
+#if DEBUG_STATE_MACHINE
     printf ("TOKEN_DOUBLE_QUOTE:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+#endif
     token_list[token_list_index] = strdup(start_token_pointer);
     token_list_index++;
 
@@ -48,7 +63,7 @@ eParseStates End_DoubleQuote_Parsed_EventHandler (void)
 
 eParseStates Start_SingleQuote_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     start_token_pointer = input_string_pointer;
@@ -57,13 +72,15 @@ eParseStates Start_SingleQuote_Parsed_EventHandler (void)
 }
 eParseStates End_SingleQuote_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     end_token_pointer = input_string_pointer -1;
     char temp = *end_token_pointer;
     *end_token_pointer = '\0';
+#if DEBUG_STATE_MACHINE
     printf ("TOKEN_SINGLE_QUOTE:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+#endif
     token_list[token_list_index] = strdup(start_token_pointer);
     token_list_index++;
     *end_token_pointer = temp;
@@ -74,7 +91,7 @@ eParseStates End_SingleQuote_Parsed_EventHandler (void)
 
 eParseStates Anything_InsideSingleQuote_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     return Inside_SingleQuotes_State;
@@ -82,7 +99,7 @@ eParseStates Anything_InsideSingleQuote_Parsed_EventHandler (void)
 }
 eParseStates Anything_InsideDoubleQuote_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     return Inside_DoubleQuotes_State;
@@ -91,7 +108,7 @@ eParseStates Anything_InsideDoubleQuote_Parsed_EventHandler (void)
 
 eParseStates Space_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     if (ePreviousState == Inside_NormalWord_State)
@@ -99,7 +116,9 @@ eParseStates Space_Parsed_EventHandler (void)
         end_token_pointer = input_string_pointer -1;
         char temp = *end_token_pointer;
         *end_token_pointer = '\0';
+#if DEBUG_STATE_MACHINE
         printf ("TOKEN_WORD_I:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+#endif
         token_list[token_list_index] = strdup(start_token_pointer);
         token_list_index++;
         *end_token_pointer = temp;
@@ -110,7 +129,7 @@ eParseStates Space_Parsed_EventHandler (void)
 }
 eParseStates Word_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     start_token_pointer = input_string_pointer -1;
@@ -119,7 +138,7 @@ eParseStates Word_Parsed_EventHandler (void)
 }
 eParseStates Anything_InsideNormalWord_Parsed_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     return Inside_NormalWord_State;
@@ -128,7 +147,7 @@ eParseStates Anything_InsideNormalWord_Parsed_EventHandler (void)
 
 eParseStates Accept_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     if (ePreviousState == Inside_NormalWord_State)
@@ -136,7 +155,9 @@ eParseStates Accept_EventHandler (void)
         end_token_pointer = input_string_pointer -1;
         char temp = *end_token_pointer;
         *end_token_pointer = '\0';
+#if DEBUG_STATE_MACHINE
         printf ("TOKEN_WORD_II:%s size:%ld\n", start_token_pointer, start_token_pointer-end_token_pointer);
+#endif
         token_list[token_list_index] = strdup(start_token_pointer);
         token_list_index++;
         *end_token_pointer = temp;
@@ -148,7 +169,7 @@ eParseStates Accept_EventHandler (void)
 
 eParseStates Reject_EventHandler (void)
 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
     return Error_State;
@@ -187,10 +208,29 @@ sParserStateMachine asParserStateMachine [] =
 /*==================BUILT INs===========*/
 int mat_builtin_cd (char **arg)
 {
+#if DEBUG_GENERIC
+    printf ("+++ %s +++\n", __func__);
+#endif
+    if (NULL != arg[2])
+    {
+        fprintf (stderr, "mat_shell: cd: Too many arguments\n");
+    }
+    else
+    {
+        //Have just one argument, continue changing directory
+        if (0 != chdir(arg[1]))
+        {
+            perror ("mat_shell");
+        }
+    }
     return 0;
 }
 int mat_builtin_exit (char **arg)
 {
+#if DEBUG_GENERIC
+    printf ("+++ %s +++\n", __func__);
+#endif
+
     return 0;
 }
 
@@ -203,41 +243,45 @@ mat_builtins builtins [] = {
 
 eParseEvents read_next_letter ()
 {
+#if DEBUG_GENERIC
+    printf ("+++ %s +++\n", __func__);
+#endif
+
     eParseEvents event = UndefinedCode_Parsed_Event;
     if (input_string_pointer != NULL)
     {
         if ((*input_string_pointer == ' '))
         {
             event = Space_Parsed_Event;
-#if DEBUG
+#if DEBUG_STATE_MACHINE
             printf ("space seen \n");
 #endif
         }
         else if ((*input_string_pointer == '\"'))
         {
             event = DoubleQuote_Parsed_Event;
-#if DEBUG
+#if DEBUG_STATE_MACHINE
             printf ("double quote seen \n");
 #endif
         }
         else if ((*input_string_pointer == '\''))
         {
             event = SingleQuote_Parsed_Event;
-#if DEBUG
+#if DEBUG_STATE_MACHINE
             printf ("single quote seen \n");
 #endif
         }
         else if ((*input_string_pointer == '\0') || (*input_string_pointer == '\n'))
         {
             event = NewLine_Parsed_Event;
-#if DEBUG
+#if DEBUG_STATE_MACHINE
             printf ("Newline seen \n");
 #endif
         }
         else
         {
             event = NormalCharacter_Parsed_Event;
-#if DEBUG
+#if DEBUG_STATE_MACHINE
             printf ("normal character seen \n");
 #endif
         }
@@ -245,7 +289,7 @@ eParseEvents read_next_letter ()
     else
     {
             event = NewLine_Parsed_Event;
-#if DEBUG
+#if DEBUG_STATE_MACHINE
             printf ("NULL detected \n");
 #endif
     }
@@ -257,6 +301,9 @@ eParseEvents read_next_letter ()
 /*read input from stdin*/
 void mat_readcommands()
 {
+#if DEBUG_GENERIC
+    printf ("+++ %s +++\n", __func__);
+#endif
     char *lineptr = NULL, *lineptrdup = NULL;
     char *trimmedptr;
     size_t linesize = 0;
@@ -264,53 +311,24 @@ void mat_readcommands()
     int n_chars_read = -1;
     if (-1 == (n_chars_read = getdelim(&lineptr, &linesize, '\n', stdin)))
     {
-#if DEBUG
-        fprintf (stderr, "Failed to read the input! Exiting"); // Ctrl + D
-#endif
+        fprintf (stderr, "mat_shell: Failed to read the input! Exiting"); // Ctrl + D
         free (lineptr); // free() even if failed. Ref: 'man getdelim'
         if (feof(stdin)) 
         {
             //exit() on EOF
-#if DEBUG
-        fprintf (stderr, "EOF received, gracefully exiting");
-#endif 
+        fprintf (stderr, "mat_shell: EOF received, gracefully exiting");
             exit(EXIT_SUCCESS);
         } 
         else  
         {
-            perror("getdelim()");
+            perror("mat_shell");
             exit(EXIT_FAILURE);
         }
     }
-#if DEBUG
+#if DEBUG_GENERIC
     fprintf (stderr, "original input(%s)->its allocated size(%lu), no. of characters read:(%d)", lineptr, linesize, n_chars_read);
 #endif
 
-#if 0
-    /* trim trailing spaces */
-    trimmedptr = lineptr;
-    while (lineptr[i] == ' ' && lineptr[i]!= '\0') 
-    {
-        i++;
-        trimmedptr++;
-    }
-#if DEBUG
-    fprintf (stderr, " Trailer Trimmed string(%s)", trimmedptr);
-#endif
-    /* trim leading spaces */
-    lineptrdup = lineptr;
-    i = n_chars_read -2; //last position of string in *lineptr
-    while (lineptrdup[i] == ' ' && &(lineptrdup[i]) != trimmedptr) 
-    {
-        //printf ("i:%d", i);
-        i--;
-    }
-    lineptrdup[i+1] = '\0';
-    lineptrdup = trimmedptr;
-#if DEBUG
-    fprintf (stderr, " Leading space Trimmed string(%s)", lineptrdup);
-#endif
-#endif
     if (MAX_CHAR_LIMIT < n_chars_read)
     {
         fprintf (stderr, "error: Input exceeded 1000 characters");
@@ -325,7 +343,7 @@ void mat_readcommands()
     while (eNextState != Accept_State)
     {
         eNewEvent = read_next_letter ();
-#if DEBUG
+#if DEBUG_STATE_MACHINE
         printf ("eNewEvent: %d, eNextState: %d\n", eNewEvent, eNextState);
         //printf ("TRANSITION_COUNT:%ld\n", TRANSITION_COUNT);
 #endif
@@ -333,12 +351,12 @@ void mat_readcommands()
         {
             if ((eNextState == asParserStateMachine[i].eParserStateMachine))
             {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
                 printf ("State: i: %d, [%d,%d]\n", i, eNextState, asParserStateMachine[i].eParserStateMachine);
 #endif
                 if (eNewEvent == asParserStateMachine[i].eParserStateMachineEvents)
                 {
-#if DEBUG
+#if DEBUG_STATE_MACHINE
                     printf ("Event: [%d,%d]\n", eNewEvent, asParserStateMachine[i].eParserStateMachineEvents);
 #endif
                     ePreviousState = eNextState;
@@ -352,7 +370,9 @@ void mat_readcommands()
 
         if (i >= TRANSITION_COUNT)
         {
+#if DEBUG_STATE_MACHINE
             printf ("REJECT\n");
+#endif
             eNextState = Error_State;
             break;
 
@@ -360,19 +380,13 @@ void mat_readcommands()
         
     }
 
-/**
- * /bin/echo extra   spaces will    be     removed
- * "but any thing inside thy're ee"
- * '/tmp/"hello"'
- * /usr/bin/printf "The cat's name is %s.\n" 'Theodore Roosevelt'
- * /usr/bin/printf "Missing quote
- * 
- */
+#if DEBUG_GENERIC
     printf ("Tokens:\n");
     for (int idx= 0 ; idx < token_list_index; idx++)
     {
         printf ("%s\n", token_list[idx]);
     }
+#endif
 
 exit:
 
@@ -382,9 +396,12 @@ exit:
 
 void clear_token_list ()
 {
+#if DEBUG_GENERIC
+    printf ("+++ %s +++\n", __func__);
+#endif
+
     for (int idx= 0 ; idx < token_list_index; idx++)
     {
-        //printf ("%s\n", token_list[idx]);
         if (NULL != token_list[idx])
         {
             free (token_list[idx]);
@@ -398,8 +415,20 @@ void clear_token_list ()
 
 int mat_execute_command (char **args)
 {
+#if DEBUG_GENERIC
+    printf ("+++ %s +++\n", __func__);
+#endif
   pid_t pid, wpid;
-  int status;
+  int status, counter = 0;
+
+  while (builtins[counter].command_name != NULL && args[0] != NULL)
+  {
+    if (strcmp(args[0], builtins[counter].command_name) == 0)
+    {
+        return(*builtins[counter].func) (args);
+    }
+    counter++;
+  }
 
   pid = fork();
   if (pid == 0) {
