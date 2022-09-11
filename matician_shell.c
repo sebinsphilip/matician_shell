@@ -361,6 +361,7 @@ void mat_readcommands()
     }
 
 /**
+ * /bin/echo extra   spaces will    be     removed
  * "but any thing inside thy're ee"
  * '/tmp/"hello"'
  * /usr/bin/printf "The cat's name is %s.\n" 'Theodore Roosevelt'
@@ -384,11 +385,40 @@ void clear_token_list ()
     for (int idx= 0 ; idx < token_list_index; idx++)
     {
         //printf ("%s\n", token_list[idx]);
-        free (token_list[idx]);
-        token_list[idx] = NULL;
+        if (NULL != token_list[idx])
+        {
+            free (token_list[idx]);
+            token_list[idx] = NULL;
+        }
+        
     }
     token_list_index = 0;
 
+}
+
+int mat_execute_command (char **args)
+{
+  pid_t pid, wpid;
+  int status;
+
+  pid = fork();
+  if (pid == 0) {
+    // Child process
+    if (execvp(args[0], args) == -1) {
+      perror("mat_shell");
+    }
+    exit(EXIT_FAILURE);
+  } else if (pid < 0) {
+    // Error forking
+    perror("mat_shell");
+  } else {
+    // Parent process
+    do {
+      wpid = waitpid(pid, &status, WUNTRACED);
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+  }
+
+  return 1;
 }
 
 int main()
@@ -398,6 +428,7 @@ int main()
         fprintf (stderr, "$");
         start_token_pointer = end_token_pointer = NULL;
         mat_readcommands ();
+        mat_execute_command (token_list);
         clear_token_list();
     }
     return EXIT_SUCCESS;

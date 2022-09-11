@@ -8,6 +8,10 @@
 #include <string.h>
 #include <math.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #define DEBUG 0 // Keep DEBUG as 0 to improve speed!
 #define  MAX_CHAR_LIMIT 1000
 
