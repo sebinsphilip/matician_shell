@@ -1,0 +1,29 @@
+
+https://www.grymoire.com/Unix/Sh.html
+
+
+write a simple shell in c:
+
+https://brennan.io/2015/01/16/write-a-shell-in-c/
+https://www.geeksforgeeks.org/making-linux-shell-c/
+https://medium.com/swlh/tutorial-to-code-a-simple-shell-in-c-9405b2d3533e
+
+https://stackoverflow.com/questions/9659697/parse-string-into-array-based-on-spaces-or-double-quotes-strings
+https://aticleworld.com/state-machine-using-c/
+
+
+/* use with builtins -- https://medium.com/swlh/tutorial-to-code-a-simple-shell-in-c-9405b2d3533e
+while (my_aliases[counter].alias_name != NULL)
+   {
+   if (strcmp(args[0], my_aliases[counter].alias_name) == 0)
+   {
+      return(my_aliases[counter].real_name);
+   }
+   counter++;
+   }
+*/
+
+TODO:
+execute first argument
+buils-ins
+less than 100 arguments > error
