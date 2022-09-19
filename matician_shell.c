@@ -1,5 +1,4 @@
 /*
-
 Author: Sebin Shaji Philip (sebin@kth.se)
 
 compile:
@@ -25,6 +24,9 @@ compile:
  * exit
  * head /nonexistent - should print error code on error exit
  */
+
+
+/*==================State machine implementation for parsing into tokens ===========*/
 
 char* input_string_pointer;
 
@@ -176,6 +178,7 @@ eParseStates Reject_EventHandler (void)
 #if DEBUG_STATE_MACHINE
     printf ("+++ %s +++\n", __func__);
 #endif
+    fprintf (stderr, "error: mismatched quotes \n");
     return Error_State;
 
 }
@@ -208,6 +211,7 @@ sParserStateMachine asParserStateMachine [] =
 
 };
 #define TRANSITION_COUNT (sizeof(asParserStateMachine)/sizeof(*asParserStateMachine))
+/*==================State machine implementation for parsing into tokens ===========*/
 
 /*==================BUILT INs===========*/
 int mat_builtin_cd (char **arg)
