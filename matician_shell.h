@@ -11,11 +11,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define DEBUG 1 // Keep DEBUG as 0 to improve speed!
 
 #if DEBUG
-#define DEBUG_STATE_MACHINE 1
+#define DEBUG_STATE_MACHINE 0
 #define DEBUG_GENERIC 0
 #endif
 

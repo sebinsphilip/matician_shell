@@ -15,11 +15,15 @@ compile:
  * /bin/ls -l /usr/share
  * cat /proc/mounts
  * /bin/echo extra   spaces will    be     removed
+ * echo "but   not if    they're    in    quotes"
  * "but any thing inside thy're ee"
  * '/tmp/"hello"'
  * /usr/bin/printf "The cat's name is %s.\n" 'Theodore Roosevelt'
  * /usr/bin/printf "Missing quote
  * cd /sys
+ * ctrl + D - EOF
+ * exit
+ * head /nonexistent - should print error code on error exit
  */
 
 char* input_string_pointer;
@@ -213,17 +217,17 @@ int mat_builtin_cd (char **arg)
 #endif
     if (NULL != arg[2])
     {
-        fprintf (stderr, "mat_shell: cd: Too many arguments\n");
+        fprintf (stderr, "error: Too many arguments\n");
     }
     else
     {
         //Have just one argument, continue changing directory
         if (0 != chdir(arg[1]))
         {
-            perror ("mat_shell");
+            perror ("error:");
         }
     }
-    return 0;
+    return 1;
 }
 int mat_builtin_exit (char **arg)
 {
@@ -299,7 +303,7 @@ eParseEvents read_next_letter ()
 }
 
 /*read input from stdin*/
-void mat_readcommands()
+int mat_readcommands()
 {
 #if DEBUG_GENERIC
     printf ("+++ %s +++\n", __func__);
@@ -307,21 +311,21 @@ void mat_readcommands()
     char *lineptr = NULL, *lineptrdup = NULL;
     char *trimmedptr;
     size_t linesize = 0;
-    int i = 0;
+    int i = 0, exit_code = 1;
     int n_chars_read = -1;
     if (-1 == (n_chars_read = getdelim(&lineptr, &linesize, '\n', stdin)))
     {
-        fprintf (stderr, "mat_shell: Failed to read the input! Exiting"); // Ctrl + D
+        //fprintf (stderr, "mat_shell: Failed to read the input! Exiting"); // Ctrl + D
         free (lineptr); // free() even if failed. Ref: 'man getdelim'
         if (feof(stdin)) 
         {
             //exit() on EOF
-        fprintf (stderr, "mat_shell: EOF received, gracefully exiting");
+            fprintf (stderr, "error: EOF received, gracefully exiting!\n");
             exit(EXIT_SUCCESS);
         } 
         else  
         {
-            perror("mat_shell");
+            perror("error:");
             exit(EXIT_FAILURE);
         }
     }
@@ -332,7 +336,9 @@ void mat_readcommands()
     if (MAX_CHAR_LIMIT < n_chars_read)
     {
         fprintf (stderr, "error: Input exceeded 1000 characters");
-        return;
+        exit_code = -1;
+        goto exit_label;
+        
     }
     start_token_pointer = end_token_pointer = NULL;
     input_string_pointer = lineptr;
@@ -373,6 +379,7 @@ void mat_readcommands()
 #if DEBUG_STATE_MACHINE
             printf ("REJECT\n");
 #endif
+            exit_code = -1;
             eNextState = Error_State;
             break;
 
@@ -388,10 +395,13 @@ void mat_readcommands()
     }
 #endif
 
-exit:
+exit_label:
 
-    free(lineptr);
-
+    if (NULL != lineptr)
+    {
+        free(lineptr);
+    }
+    return exit_code;
 }
 
 void clear_token_list ()
@@ -413,51 +423,100 @@ void clear_token_list ()
 
 }
 
-int mat_execute_command (char **args)
+int mat_execute_command(char **args)
 {
 #if DEBUG_GENERIC
-    printf ("+++ %s +++\n", __func__);
+    printf("+++ %s +++\n", __func__);
 #endif
-  pid_t pid, wpid;
-  int status, counter = 0;
+    pid_t pid, wpid;
+    int status, counter = 0;
 
-  while (builtins[counter].command_name != NULL && args[0] != NULL)
-  {
-    if (strcmp(args[0], builtins[counter].command_name) == 0)
+#if DEBUG_GENERIC
+    if (NULL == token_list[0])
     {
-        return(*builtins[counter].func) (args);
+        fprintf(stderr, "NULL = token_list[0] detected \n");
     }
-    counter++;
-  }
-
-  pid = fork();
-  if (pid == 0) {
-    // Child process
-    if (execvp(args[0], args) == -1) {
-      perror("mat_shell");
+#endif
+    if (0 == token_list_index)
+    {
+#if DEBUG_GENERIC /*Do nothing , because only spaces and/or newline detected*/
+        fprintf(stderr, "0 = token_list_index detected \n");
+#endif
     }
-    exit(EXIT_FAILURE);
-  } else if (pid < 0) {
-    // Error forking
-    perror("mat_shell");
-  } else {
-    // Parent process
-    do {
-      wpid = waitpid(pid, &status, WUNTRACED);
-    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-  }
+    else if (token_list_index > 100)
+    {
+        fprintf (stderr, "error: more than 100 arguments detected! \n");
+    }
+    else
+    {
+        while (builtins[counter].command_name != NULL && args[0] != NULL)
+        {
+            if (strcmp(args[0], builtins[counter].command_name) == 0)
+            {
+                return (*builtins[counter].func)(args);
+            }
+            counter++;
+        }
 
-  return 1;
+        pid = fork();
+        if (pid == 0)
+        {
+            /* Forked child process */
+
+            if (execvp(args[0], args) == -1)
+            {
+                perror("error:");
+            }
+            exit(EXIT_FAILURE);
+        }
+        else if (pid < 0)
+        {
+            /* Forking failed */
+            perror("error:");
+        }
+        else /*Parent process */
+        {
+            do
+            {
+                wpid = waitpid(pid, &status, WUNTRACED);
+                if (WIFSIGNALED(status))
+                {
+                    fprintf(stderr, "error: command signalled with code %d \n", WTERMSIG(status));
+                }
+                else if (WIFSTOPPED(status))
+                {
+                    fprintf(stderr, "error: command stopped with code %d \n", WSTOPSIG(status));
+                }
+                else if (WIFEXITED(status))
+                {
+                    if (0 != WEXITSTATUS(status))
+                    {
+                        fprintf(stderr, "error: command exited with code %d \n", WEXITSTATUS(status));
+                    }
+                }
+                else
+                {
+                    fprintf(stderr, "error: unrecognised waitpid() status:%d \n", status);
+                }
+            } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+        }
+    }
+
+    return 1;
 }
 
 int main()
 {
-    while (1)
+    int return_val = 1, valid_command = -1;
+    while (return_val)
     {
         fprintf (stderr, "$");
         start_token_pointer = end_token_pointer = NULL;
-        mat_readcommands ();
-        mat_execute_command (token_list);
+        valid_command = mat_readcommands ();
+        if (1 == valid_command)
+        {
+            return_val = mat_execute_command (token_list);
+        }
         clear_token_list();
     }
     return EXIT_SUCCESS;
